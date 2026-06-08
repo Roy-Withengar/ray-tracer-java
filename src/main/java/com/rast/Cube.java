@@ -80,6 +80,7 @@ public class Cube
         double projX = point.getX() * projectionPlaneZ / point.getZ();
 
         double projY = point.getY() * projectionPlaneZ / point.getZ();
+
         return viewportToCanvas(projX, projY);
     }
 }
