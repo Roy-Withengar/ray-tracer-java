@@ -27,11 +27,7 @@ public class ObjectRender
 
     public static final Color CYAN = new Color(0,255,255);
 
-    static  int canvasWidth = 600;
-
-    static  int canvasHeight = 600;
-
-    public PixelDrawer drawer = PixelDrawer.getInstance(canvasWidth,canvasHeight);
+    public PixelDrawer drawer = PixelDrawer.getInstance(RenderConfig.CANVAS_WIDTH,RenderConfig.CANVAS_HEIGHT);
 
     Line line = new Line();
     /**
@@ -47,14 +43,13 @@ public class ObjectRender
 
     public static void main(String[] args)
     {
-        ObjectRender objectRender = new ObjectRender();
+        ObjectRender cube = new ObjectRender();
 
-        var points = new Point[]
+        cube.vertexes = List.of(new Point[]
                 {
+                        new Point(1, 1, 1),
 
-                        new Point(1,1,1),
-
-                        new Point(-1,1,1),
+                        new Point(-1, 1, 1),
 
                         new Point(-1, -1, 1),
 
@@ -68,9 +63,9 @@ public class ObjectRender
 
                         new Point(1, -1, -1)
 
-                };
+                });
 
-        var triangles = new Triangle[]
+        cube.triangles = List.of(new Triangle[]
                 {
                         new Triangle(0, 1, 2, RED),
 
@@ -95,20 +90,17 @@ public class ObjectRender
                         new Triangle(2, 6, 7, CYAN),
 
                         new Triangle(2, 7, 3, CYAN)
-                };
+                });
 
-        for (Point point:points)
-        {
 
-            point.setX(point.getX()-1.5);
+        List<ObjectInstance> objectInstances = List.of(new ObjectInstance(cube,new Point(-1.5,0,7),Matrix4.identity(),0.75),
+                new ObjectInstance(cube,new Point(1.25,2,7.5),Matrix4.MakeOYRotationMatrix(195),1));
 
-            point.setZ(point.getZ()+5);
+        RastCamera rastCamera = new RastCamera(new Point(-3,-1,2),Matrix4.MakeOYRotationMatrix(-30));
 
-        }
+        cube.renderScene(rastCamera,objectInstances);
 
-        objectRender.objectRender(List.of(points), List.of(triangles));
-
-        objectRender.drawer.show("cube");
+        cube.drawer.show("cube");
 
     }
 
@@ -154,9 +146,35 @@ public class ObjectRender
         line.drawLine(p0,p2,color,drawer);
     }
 
+    //实例化渲染
+    public void renderScene(RastCamera rastCamera,List<ObjectInstance> instances)
+    {
+        Matrix4.makeTranslationMatrix(Point.multiply(-1,rastCamera.position()));
+
+        for (ObjectInstance objectInstance:instances)
+        {
+            renderInstance(objectInstance);
+        }
+    }
 
 
+    public void renderInstance(ObjectInstance objectInstance)
+    {
+        List<Point2D> projected = new ArrayList<>();
 
+        ObjectRender model = objectInstance.objectRender();
+
+        for (int i = 0;i < model.vertexes.size();i++)
+        {
+            projected.add(Point2D.projectVertex(Point.addPoint(objectInstance.point(),model.vertexes.get(i))));
+        }
+
+        for (int i =0;i < model.triangles.size();i++)
+        {
+            renderTriangle(model.triangles.get(i),projected);
+        }
+
+    }
 
 
 
