@@ -5,21 +5,12 @@ import com.demo.Point;
 
 public record Point2D(int x, int y, double h)
 {
-    static  int canvasWidth = 600;
-
-    static  int canvasHeight = 600;
-
-    static  int viewSize = 2;
-
-    static  int projectionPlaneZ = 1;
-
-
 
     public static Point2D viewportToCanvas(double x ,double y)
     {
-        double scaledX = x * canvasWidth / viewSize;
+        double scaledX = x * RenderConfig.CANVAS_WIDTH / RenderConfig.VIEW_SIZE;
 
-        double scaledY = y * canvasHeight / viewSize;
+        double scaledY = y * RenderConfig.CANVAS_HEIGHT / RenderConfig.VIEW_SIZE;
 
         return new Point2D((int) scaledX, (int) scaledY, 1.0);
     }
@@ -27,9 +18,9 @@ public record Point2D(int x, int y, double h)
     public static Point2D projectVertex(Point point)
     {
 
-        double projX = point.getX() * projectionPlaneZ / point.getZ();
+        double projX = point.getX() * RenderConfig.PROJECTION_PLANE_Z / point.getZ();
 
-        double projY = point.getY() * projectionPlaneZ / point.getZ();
+        double projY = point.getY() * RenderConfig.PROJECTION_PLANE_Z / point.getZ();
 
         return viewportToCanvas(projX, projY);
     }
