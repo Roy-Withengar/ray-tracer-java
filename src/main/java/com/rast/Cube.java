@@ -6,15 +6,8 @@ import com.demo.Point;
 
 public class Cube
 {
-    static final int canvasWidth = 600;
 
-    static final int canvasHeight = 600;
-
-    static final int viewSize = 1;
-
-    static final int projectionPlaneZ = 1;
-
-    public static PixelDrawer drawer = PixelDrawer.getInstance(canvasWidth,canvasHeight);
+    public static PixelDrawer drawer = PixelDrawer.getInstance(RenderConfig.CANVAS_WIDTH,RenderConfig.CANVAS_HEIGHT);
 
     static final Color red = new Color(255,0,0);
 
@@ -72,14 +65,14 @@ public class Cube
 
     public static Point2D viewportToCanvas(double x ,double y)
     {
-        return new Point2D( (int) (x * canvasWidth / viewSize), (int) (y * canvasHeight / viewSize),-1);
+        return new Point2D( (int) (x * RenderConfig.CANVAS_WIDTH / RenderConfig.VIEW_SIZE), (int) (y * RenderConfig.CANVAS_HEIGHT / RenderConfig.VIEW_SIZE),-1);
     }
 
     public static Point2D projectVertex(Point point)
     {
-        double projX = point.getX() * projectionPlaneZ / point.getZ();
+        double projX = point.getX() * RenderConfig.PROJECTION_PLANE_Z / point.getZ();
 
-        double projY = point.getY() * projectionPlaneZ / point.getZ();
+        double projY = point.getY() * RenderConfig.PROJECTION_PLANE_Z / point.getZ();
 
         return viewportToCanvas(projX, projY);
     }
