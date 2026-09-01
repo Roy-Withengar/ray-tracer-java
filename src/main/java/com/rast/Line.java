@@ -11,7 +11,7 @@ public class Line
 {
     public void drawLine(Point2D p0,Point2D p1,Color color,PixelDrawer drawer)
     {
-        drawLine( p0.x(),p0.y(),p1.x(),p1.y(),color,drawer);
+        drawLine((int) p0.x(), (int) p0.y(), (int) p1.x(), (int) p1.y(),color,drawer);
     }
 
     /**
