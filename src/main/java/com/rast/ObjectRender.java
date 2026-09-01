@@ -1,8 +1,6 @@
 package com.rast;
 
-import com.demo.Color;
-import com.demo.PixelDrawer;
-import com.demo.Point;
+import com.demo.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +38,11 @@ public class ObjectRender
      */
     List<Triangle> triangles = new ArrayList<>();
 
+    Point boundsCenter;
+
+    Double boundRadius;
+
+
 
     public static void main(String[] args)
     {
@@ -65,38 +68,58 @@ public class ObjectRender
 
                 });
 
-        cube.triangles = List.of(new Triangle[]
-                {
-                        new Triangle(0, 1, 2, RED),
+        cube.triangles = List.of(
 
-                        new Triangle(0, 2, 3, RED),
+                Triangle.create(0, 1, 2, RED),
 
-                        new Triangle(4, 0, 3, GREEN),
+                Triangle.create(0, 2, 3, RED),
 
-                        new Triangle(4, 3, 7, GREEN),
+                Triangle.create(4, 0, 3, GREEN),
 
-                        new Triangle(5, 4, 7, BLUE),
+                Triangle.create(4, 3, 7, GREEN),
 
-                        new Triangle(5, 7, 6, BLUE),
+                Triangle.create(5, 4, 7, BLUE),
 
-                        new Triangle(1, 5, 6, YELLOW),
+                Triangle.create(5, 7, 6, BLUE),
 
-                        new Triangle(1, 6, 2, YELLOW),
+                Triangle.create(1, 5, 6, YELLOW),
 
-                        new Triangle(4, 5, 1, PURPLE),
+                Triangle.create(1, 6, 2, YELLOW),
 
-                        new Triangle(4, 1, 0, PURPLE),
+                Triangle.create(4, 5, 1, PURPLE),
 
-                        new Triangle(2, 6, 7, CYAN),
+                Triangle.create(4, 1, 0, PURPLE),
 
-                        new Triangle(2, 7, 3, CYAN)
-                });
+                Triangle.create(2, 6, 7, CYAN),
+
+                Triangle.create(2, 7, 3, CYAN)
+        );
+
+        cube.boundsCenter = new Point(0,0,0);
+
+        cube.boundRadius = Math.sqrt(3);
 
 
         List<ObjectInstance> objectInstances = List.of(new ObjectInstance(cube,new Point(-1.5,0,7),Matrix4.identity(),0.75),
-                new ObjectInstance(cube,new Point(1.25,2,7.5),Matrix4.MakeOYRotationMatrix(195),1));
+                new ObjectInstance(cube,new Point(1.25,2.5,7.5),Matrix4.MakeOYRotationMatrix(195),1));
 
-        RastCamera rastCamera = new RastCamera(new Point(-3,-1,2),Matrix4.MakeOYRotationMatrix(-30));
+        RastCamera rastCamera = new RastCamera(new Point(-3,1,2),Matrix4.MakeOYRotationMatrix(-30));
+
+        double s2 = Math.sqrt(2) / 2.0;
+
+        RastCamera.clippingPlanes = List.of(
+
+                new Plane(new Vector3D(0,0,1),-1),
+
+                new Plane(new Vector3D(s2,0,s2),0),
+
+                new Plane(new Vector3D(-s2,0,s2),0),
+
+                new Plane(new Vector3D(0,-s2,s2),0),
+
+                new Plane(new Vector3D(0,s2,s2),0)
+        );
+
 
         cube.renderScene(rastCamera,objectInstances);
 
@@ -149,29 +172,122 @@ public class ObjectRender
     //实例化渲染
     public void renderScene(RastCamera rastCamera,List<ObjectInstance> instances)
     {
-        Matrix4.makeTranslationMatrix(Point.multiply(-1,rastCamera.position()));
+
+        Matrix4 matrix4 = Matrix4.makeTranslationMatrix(Point.multiply(-1, rastCamera.position()));
+
+        Matrix4 transposed = rastCamera.orientation().transposed();
+
+        Matrix4 cameraMatrix = transposed.multiply(matrix4);
 
         for (ObjectInstance objectInstance:instances)
         {
-            renderInstance(objectInstance);
+
+            Matrix4 translationMatrix = Matrix4.makeTranslationMatrix(objectInstance.point());
+
+            Matrix4 matrix = objectInstance.orientation().multiply(Matrix4.makeScalingMatrix(objectInstance.scale()));
+
+            Matrix4 transform = translationMatrix.multiply(matrix);
+
+            Matrix4 multiply = cameraMatrix.multiply(transform);
+
+            transformAndClip(RastCamera.clippingPlanes,objectInstance,multiply);
+
+            renderModel(objectInstance,multiply);
         }
     }
 
 
-    public void renderInstance(ObjectInstance objectInstance)
+    public void renderModel(ObjectInstance objectInstance,Matrix4 transform)
     {
         List<Point2D> projected = new ArrayList<>();
 
-        ObjectRender model = objectInstance.objectRender();
+        ObjectRender model = (ObjectRender) objectInstance.objectRender();
 
         for (int i = 0;i < model.vertexes.size();i++)
         {
-            projected.add(Point2D.projectVertex(Point.addPoint(objectInstance.point(),model.vertexes.get(i))));
+            projected.add(Point2D.projectVertex(transform.multiplyMV(model.vertexes.get(i))));
         }
 
         for (int i =0;i < model.triangles.size();i++)
         {
             renderTriangle(model.triangles.get(i),projected);
+        }
+
+    }
+
+    public ClippingModel transformAndClip(List<Plane> clippingPlanes,ObjectInstance model,Matrix4 transform)
+    {
+        Point center = transform.multiplyMV(boundsCenter);
+
+        for (Plane p : clippingPlanes)
+        {
+            double distance = Vector3D.dotProduct(p.normal(), Point.pointToVector(center)) + p.distance();
+
+            if (distance < -boundRadius)
+            {
+                return null;
+            }
+        }
+
+        List<Point> transformVertexes = new ArrayList<>();
+
+        for (Point vertex:vertexes)
+        {
+            transformVertexes.add(transform.multiplyMV(vertex));
+        }
+
+        List<Triangle> copyTriangle = triangles;
+
+        for (Plane p : clippingPlanes)
+        {
+            List<Triangle> newTriangles = new ArrayList<>();
+
+            for (Triangle triangle:copyTriangle)
+            {
+                clipTriangle(triangle,p,newTriangles,transformVertexes);
+            }
+
+            copyTriangle = newTriangles;
+        }
+
+        return new ClippingModel(transformVertexes,copyTriangle,center,boundRadius);
+
+    }
+
+
+    public void clipTriangle(Triangle triangle,Plane plane,List<Triangle> newTriangle,List<Point> vertexes)
+    {
+        Point v0 = vertexes.get((int) triangle.v0());
+
+        Point v1 = vertexes.get((int) triangle.v0());
+
+        Point v2 = vertexes.get((int) triangle.v0());
+
+        boolean in0 = Vector3D.dotProduct(plane.normal(),Point.pointToVector(v0)) + plane.distance() > 0;
+
+        boolean in1 = Vector3D.dotProduct(plane.normal(),Point.pointToVector(v1)) + plane.distance() > 0;
+
+        boolean in2 = Vector3D.dotProduct(plane.normal(),Point.pointToVector(v2)) + plane.distance() > 0;
+
+
+        int inCount = (in0 ? 1 : 0) + (in1 ? 1 : 0) + (in2 ? 1 : 0);
+
+        if (inCount == 0)
+        {
+            // 全在外側，丢弃，不做处理
+        }
+        else if (inCount == 3)
+        {
+            // 全在内側，直接保留原三角形
+            newTriangle.add(triangle);
+        }
+        else if (inCount == 1)
+        {
+            // 1个在内，2个在外，裁剪后生成1个新三角形
+        }
+        else
+        {
+            // 2个在内，1个在外，裁剪后生成2个新三角形
         }
 
     }
