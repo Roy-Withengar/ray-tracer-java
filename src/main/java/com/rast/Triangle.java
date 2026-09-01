@@ -2,12 +2,20 @@ package com.rast;
 
 import com.demo.Color;
 import com.demo.PixelDrawer;
+import com.demo.Point;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public record Triangle(double v0, double v1, double v2, Color color)
+public record Triangle(double v0, double v1, double v2, Color color ,Point[] normals)
 {
+
+
+    // 兼容旧代码的工厂方法：不传法线，等价于无顶点法线模式
+    public static Triangle create(double v0, double v1, double v2, Color color)
+    {
+        return new Triangle(v0, v1, v2, color, null);
+    }
 
     public static void DrawFilledTriangle(Point2D p0,Point2D p1,Point2D p2,Color color,PixelDrawer drawer)
     {
@@ -33,19 +41,19 @@ public record Triangle(double v0, double v1, double v2, Color color)
 
         Line line = new Line();
 
-        List<Integer> x01 = line.interpolate(p0.y(), p0.x(), p1.y(), p1.x());
+        List<Double> x01 = line.interpolate(p0.y(), p0.x(), p1.y(), p1.x());
 
         List<Double> h01 = line.interpolate(p0.y(), p0.h(), p1.y(), p1.h());
 
-        List<Integer> x12 = line.interpolate(p1.y(), p1.x(), p2.y(), p2.x());
+        List<Double> x12 = line.interpolate(p1.y(), p1.x(), p2.y(), p2.x());
 
         List<Double> h12 = line.interpolate(p1.y(), p1.h(), p2.y(), p2.h());
 
-        List<Integer> x02 = line.interpolate(p0.y(), p0.x(), p2.y(), p2.x());
+        List<Double> x02 = line.interpolate(p0.y(), p0.x(), p2.y(), p2.x());
 
         List<Double> h02 = line.interpolate(p0.y(), p0.h(), p2.y(), p2.h());
 
-        List<Integer> x012 = new ArrayList<>();
+        List<Double> x012 = new ArrayList<>();
 
         List<Double> h012 = new ArrayList<>();
 
@@ -61,11 +69,11 @@ public record Triangle(double v0, double v1, double v2, Color color)
 
         h012.addAll(h12);
 
-        List<Integer> xLeft;
+        List<Double> xLeft;
 
         List<Double> hLeft;
 
-        List<Integer> xRight;
+        List<Double> xRight;
 
         List<Double> hRight;
 
@@ -92,17 +100,17 @@ public record Triangle(double v0, double v1, double v2, Color color)
             hRight = h02;
         }
 
-        for (int y = p0.y();y <= p2.y();y++)
+        for (int y = (int) p0.y(); y <= p2.y(); y++)
         {
-            var xL = xLeft.get(y - p0.y());
+            double xL = xLeft.get((int) (y - p0.y()));
 
-            var xR = xRight.get(y - p0.y());
+            double xR = xRight.get((int) (y - p0.y()));
 
-            var hSegment = line.interpolate(xL, hLeft.get(y - p0.y()), xR, hRight.get(y - p0.y()));
+            List<Double> hSegment = line.interpolate(xL, hLeft.get((int) (y - p0.y())), xR, hRight.get((int) (y - p0.y())));
 
-            for (var x = xL; x <= xR; x++)
+            for (double x = xL; x <= xR; x++)
             {
-                drawer.writePixel(x,y,Color.multiply(hSegment.get(x - xL),color));
+                drawer.writePixel((int) x,y,Color.multiply(hSegment.get((int) (x - xL)),color));
             }
         }
 
