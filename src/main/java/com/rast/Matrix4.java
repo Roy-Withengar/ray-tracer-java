@@ -1,6 +1,7 @@
 package com.rast;
 
 import com.demo.Point;
+import com.demo.Vector3D;
 
 public class Matrix4
 {
@@ -102,6 +103,62 @@ public class Matrix4
                 {0, 0, 0, 1}
         };
         return new Matrix4(m);
+    }
+
+    // 3. 缩放矩阵
+    public static Matrix4 makeScalingMatrix(double scale)
+    {
+        double[][] m =
+           {
+             {scale, 0, 0, 0},
+             {0, scale, 0, 0},
+             {0, 0, scale, 0},
+             {0, 0, 0, 1}
+           };
+        return new Matrix4(m);
+    }
+
+
+    public Point multiplyMV(Point point)
+    {
+        double[] vec = {point.getX(), point.getY(), point.getZ(), 1.0};
+
+        double[] res = new double[4];
+        for (int row = 0; row < 4; row++)
+        {
+            double sum = 0;
+            for (int k = 0; k < 4; k++)
+            {
+                sum += matrix[row][k] * vec[k];
+            }
+            res[row] = sum;
+        }
+
+        double w = res[3];
+
+        return new Point(res[0]/w, res[1]/w, res[2]/w);
+    }
+
+
+    public Vector4 multiplyMV(Vector4 vec4)
+    {
+        double[] vec = {vec4.getX(), vec4.getY(), vec4.getZ(), vec4.getW()};
+
+        double[] res = new double[4];
+
+        for (int row = 0; row < 4; row++)
+        {
+            double sum = 0;
+
+            for (int k = 0; k < 4; k++)
+            {
+                sum += matrix[row][k] * vec[k];
+            }
+
+            res[row] = sum;
+        }
+
+        return new Vector4(res[0], res[1], res[2], res[3]);
     }
 
 }
